@@ -108,7 +108,6 @@ void Window::load()
 
 void Window::save()
 {
-    qDebug() << "Saving";
     QFile outputFile(QDir::home().filePath("todo.txt"));
     if (!outputFile.open(QIODevice::WriteOnly)) {
         qWarning() << "Failed to open" << outputFile.fileName() << outputFile.errorString();
@@ -116,6 +115,9 @@ void Window::save()
     }
     for (int row=0; row<m_listModel->rowCount(); row++) {
         QStandardItem *item = m_listModel->item(row);
+        if (item->text().isEmpty()) {
+            continue;
+        }
         if (item->checkState() == Qt::Checked) {
             outputFile.write(" x ");
         } else {
@@ -130,6 +132,10 @@ void Window::save()
 
 void Window::addItem(const QString &text, const bool checked)
 {
+    if (text.isEmpty()) {
+        return;
+    }
+
     QStandardItem *item = new QStandardItem(text);
     item->setCheckable(true);
     item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
