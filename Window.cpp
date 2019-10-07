@@ -8,60 +8,70 @@
 
 #include <QStandardItemModel>
 #include <QListView>
+#include <QListView>
 #include <QSortFilterProxyModel>
 #include <QLineEdit>
 #include <QAction>
 
 #include <QVBoxLayout>
 
-Window::Window(QWidget *parent)
-    : QDialog(parent)
+Window::Window()
 {
+    setWindowFlag(Qt::Dialog);
     setLayout(new QVBoxLayout);
 
-    setWindowFlag(Qt::Dialog);
+    // Tray icon
+    QSystemTrayIcon *trayIcon = new QSystemTrayIcon(QPixmap(":/icon.png"), this);
+    trayIcon->show();
+    connect(trayIcon, &QSystemTrayIcon::activated, this, [=]() { setVisible(!isVisible()); });
 
-    m_trayIcon = new QSystemTrayIcon(this);
-    m_trayIcon->setIcon(QPixmap(":/icon.png"));
-    m_trayIcon->show();
-
-    QAction *quitAction = new QAction("Quit");
-    quitAction->setShortcut(Qt::CTRL + Qt::Key_Q);
-    connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
+    // Quit action (ctrl+q I guess)
+    QAction *quitAction = new QAction("Quit", this);
+    quitAction->setShortcut(QKeySequence::Quit);
     addAction(quitAction);
+    connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
 
-    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [=]() { setVisible(!isVisible()); });
-
-    QLineEdit *filterEdit = new QLineEdit(this);
-    filterEdit->setPlaceholderText("Search");
-    layout()->addWidget(filterEdit);
-
+    // Model with the actual tasks
     m_listModel = new QStandardItemModel(this);
+
+    // For sorting checked tasks below unchecked, and searching/filtering
     m_filterModel = new QSortFilterProxyModel(this);
+    m_filterModel->setRecursiveFilteringEnabled(true);
     m_filterModel->setSourceModel(m_listModel);
+    m_filterModel->setSortRole(Qt::CheckStateRole);
+
+    // List of tasks
     m_listView = new QListView(this);
-    layout()->addWidget(m_listView);
     m_listView->setModel(m_filterModel);
     m_listView->setDragDropMode(QAbstractItemView::InternalMove);
 
+    // Add new item edit
     m_addEdit = new QLineEdit(this);
     m_addEdit->setPlaceholderText("Enter todo item...");
+    m_addEdit->setClearButtonEnabled(true);
+    connect(m_addEdit, &QLineEdit::returnPressed, this, &Window::onAddAccepted);
+
+    // Search edit
+    QLineEdit *filterEdit = new QLineEdit(this);
+    filterEdit->setPlaceholderText("Search");
+    filterEdit->setClearButtonEnabled(true);
+    connect(filterEdit, &QLineEdit::textChanged, m_filterModel, &QSortFilterProxyModel::setFilterFixedString);
+    connect(filterEdit, SIGNAL(returnPressed()), m_addEdit, SLOT(setFocus())); // the qOverride crap is so fucking ugly
+
+    // Filter/search on top, the list in the middle, entering new item at the bottom
+    layout()->addWidget(filterEdit);
+    layout()->addWidget(m_listView);
     layout()->addWidget(m_addEdit);
 
+    m_listView->setFocusPolicy(Qt::NoFocus);
     m_addEdit->setFocus();
-    m_listView->setFocusProxy(m_addEdit);
-
-    connect(m_addEdit, &QLineEdit::returnPressed, this, &Window::onAddAccepted);
-    connect(filterEdit, &QLineEdit::textChanged, m_filterModel, &QSortFilterProxyModel::setFilterFixedString);
 
     load();
 
-    // We can't connect directly to the itemChanged, because then we manage to delete the item before the signal reaches the qsortfilterproxymodel
-    connect(m_filterModel, &QSortFilterProxyModel::dataChanged, this, &Window::resort);
-}
+    connect(m_filterModel, &QSortFilterProxyModel::rowsMoved, this, &Window::save);
+    connect(m_listModel, &QStandardItemModel::itemChanged, this, &Window::onItemChanged);
 
-Window::~Window()
-{
+    resize(500, 500);
 }
 
 void Window::onAddAccepted()
@@ -91,6 +101,7 @@ void Window::load()
         if (inputLine.isEmpty()) {
             continue;
         }
+
         const QChar state = inputLine[0];
         inputLine.remove(0, 1);
         if (state == 'x') {
@@ -127,35 +138,16 @@ void Window::save() const
             outputFile.write(" - ");
         }
 
-        outputFile.write(item->text().toUtf8());
-
-        outputFile.write("\n");
+        outputFile.write(item->text().toUtf8() + '\n');
     }
 }
 
-void Window::resort()
+void Window::onItemChanged(QStandardItem *item)
 {
-    QStringList checked, unchecked;
-    for (int row=0; row<m_listModel->rowCount(); row++) {
-        QStandardItem *item = m_listModel->item(row);
-        if (item->checkState() == Qt::Checked) {
-            checked.prepend(item->text());
-        } else {
-            unchecked.prepend(item->text());
-        }
+    if (item->text().isEmpty()) {
+        m_listModel->removeRow(item->row(), item->parent() ? item->parent()->index() : QModelIndex());
     }
-
-    m_listModel->clear();
-
-    for (const QString &text : checked) {
-        addItem(text, true);
-    }
-    for (const QString &text : unchecked) {
-        addItem(text, false);
-    }
-
-    save();
-    m_filterModel->invalidate();
+    m_filterModel->sort(0);
 }
 
 void Window::addItem(const QString &text, const bool checked)

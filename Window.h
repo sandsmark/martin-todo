@@ -1,9 +1,8 @@
-#ifndef WINDOW_H
-#define WINDOW_H
+#pragma once
 
 #include <QDialog>
 
-class QSystemTrayIcon;
+class QStandardItem;
 class QListView;
 class QStandardItemModel;
 class QSortFilterProxyModel;
@@ -14,24 +13,20 @@ class Window : public QDialog
     Q_OBJECT
 
 public:
-    Window(QWidget *parent = nullptr);
-    ~Window();
+    Window();
 
 private slots:
     void onAddAccepted();
     void save() const;
-    void resort();
+    void onItemChanged(QStandardItem *item);
 
 private:
     void load();
     void addItem(const QString &text, const bool checked);
 
-    QSystemTrayIcon *m_trayIcon;
-
     QListView *m_listView;
     QStandardItemModel *m_listModel;
     QSortFilterProxyModel *m_filterModel;
-
     QLineEdit *m_addEdit;
 };
-#endif // WINDOW_H
+
