@@ -54,7 +54,9 @@ Window::Window(QWidget *parent)
     connect(filterEdit, &QLineEdit::textChanged, m_filterModel, &QSortFilterProxyModel::setFilterFixedString);
 
     load();
-    connect(m_listModel, &QStandardItemModel::itemChanged, this, &Window::save);
+
+    // We can't connect directly to the itemChanged, because then we manage to delete the item before the signal reaches the qsortfilterproxymodel
+    connect(m_filterModel, &QSortFilterProxyModel::dataChanged, this, &Window::resort);
 }
 
 Window::~Window()
@@ -91,9 +93,9 @@ void Window::load()
         const QChar state = inputLine[0];
         inputLine.remove(0, 1);
         if (state == 'x') {
-            checked.append(inputLine.trimmed());
+            checked.prepend(inputLine.trimmed());
         } else {
-            unchecked.append(inputLine.trimmed());
+            unchecked.prepend(inputLine.trimmed());
         }
     }
 
@@ -106,7 +108,7 @@ void Window::load()
     }
 }
 
-void Window::save()
+void Window::save() const
 {
     QFile outputFile(QDir::home().filePath("todo.txt"));
     if (!outputFile.open(QIODevice::WriteOnly)) {
@@ -128,6 +130,31 @@ void Window::save()
 
         outputFile.write("\n");
     }
+}
+
+void Window::resort()
+{
+    QStringList checked, unchecked;
+    for (int row=0; row<m_listModel->rowCount(); row++) {
+        QStandardItem *item = m_listModel->item(row);
+        if (item->checkState() == Qt::Checked) {
+            checked.prepend(item->text());
+        } else {
+            unchecked.prepend(item->text());
+        }
+    }
+
+    m_listModel->clear();
+
+    for (const QString &text : checked) {
+        addItem(text, true);
+    }
+    for (const QString &text : unchecked) {
+        addItem(text, false);
+    }
+
+    save();
+    m_filterModel->invalidate();
 }
 
 void Window::addItem(const QString &text, const bool checked)

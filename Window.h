@@ -19,7 +19,8 @@ public:
 
 private slots:
     void onAddAccepted();
-    void save();
+    void save() const;
+    void resort();
 
 private:
     void load();
