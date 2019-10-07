@@ -148,6 +148,8 @@ void Window::onItemChanged(QStandardItem *item)
         m_listModel->removeRow(item->row(), item->parent() ? item->parent()->index() : QModelIndex());
     }
     m_filterModel->sort(0);
+
+    save();
 }
 
 void Window::addItem(const QString &text, const bool checked)
