@@ -53,17 +53,16 @@ Window::Window()
 
     // Search edit
     QLineEdit *filterEdit = new QLineEdit(this);
-    filterEdit->setPlaceholderText("Search");
+    filterEdit->setPlaceholderText("Search...");
     filterEdit->setClearButtonEnabled(true);
     connect(filterEdit, &QLineEdit::textChanged, m_filterModel, &QSortFilterProxyModel::setFilterFixedString);
-    connect(filterEdit, SIGNAL(returnPressed()), m_addEdit, SLOT(setFocus())); // the qOverride crap is so fucking ugly
+    connect(filterEdit, SIGNAL(returnPressed()), m_listView, SLOT(setFocus())); // the qOverride crap is so fucking ugly
 
     // Filter/search on top, the list in the middle, entering new item at the bottom
     layout()->addWidget(filterEdit);
     layout()->addWidget(m_listView);
     layout()->addWidget(m_addEdit);
 
-    m_listView->setFocusPolicy(Qt::NoFocus);
     m_addEdit->setFocus();
 
     load();
@@ -71,7 +70,7 @@ Window::Window()
     connect(m_filterModel, &QSortFilterProxyModel::rowsMoved, this, &Window::save);
     connect(m_listModel, &QStandardItemModel::itemChanged, this, &Window::onItemChanged);
 
-    resize(500, 500);
+    resize(500, 750);
 }
 
 void Window::onAddAccepted()
