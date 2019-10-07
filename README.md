@@ -3,7 +3,7 @@ martin-todo
 
 ![screenshot](/screenshot.png)
 
-Extremely simple todo app (175 lines of code including the .pro file). Supports
+Extremely simple todo app (168 lines of code including the .pro file). Supports
 adding items, checking items, editing items (double click). Empty items are
 removed.
 
