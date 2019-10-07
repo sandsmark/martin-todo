@@ -42,6 +42,7 @@ Window::Window(QWidget *parent)
     m_listView = new QListView(this);
     layout()->addWidget(m_listView);
     m_listView->setModel(m_filterModel);
+    m_listView->setDragDropMode(QAbstractItemView::InternalMove);
 
     m_addEdit = new QLineEdit(this);
     m_addEdit->setPlaceholderText("Enter todo item...");
@@ -166,6 +167,7 @@ void Window::addItem(const QString &text, const bool checked)
     QStandardItem *item = new QStandardItem(text);
     item->setCheckable(true);
     item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+    item->setDropEnabled(false);
     m_listModel->insertRow(0, item);
 }
 
